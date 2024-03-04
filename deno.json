@@ -1,6 +1,8 @@
 {
-  "exports": "./main.ts",
+  "name": "@own3d/cli",
+  "version": "0.0.1",
+  "exports": "./own3d.ts",
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "dev": "deno run --watch own3d.ts"
   }
 }
