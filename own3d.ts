@@ -11,6 +11,7 @@ Command line tool for OWN3D Apps.
 SUBCOMMANDS:
     fn:create    Create a new edge function project
     fn:deploy    Deploy a edge function to the cloud
+    login        Log in to OWN3D
 
 For more information, read the documentation at https://dev.own3d.tv/docs/cli/
 `
