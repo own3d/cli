@@ -3,6 +3,9 @@ import * as uuid from 'https://deno.land/std@0.207.0/uuid/mod.ts'
 import { stringify } from 'https://cdn.skypack.dev/querystring'
 import { open } from 'https://deno.land/x/open/index.ts'
 import axios from 'npm:axios'
+import { useStorage } from "../composables/useStorage.ts";
+
+const {putJson} = useStorage()
 
 async function fetchUser(queryParams: any) {
     try {
@@ -48,7 +51,7 @@ export async function login(_args: Args) {
             }
             queryParams.expires_at = new Date(Date.now() + queryParams.expires_in * 1000)
             await fetchUser(queryParams)
-            await Deno.writeTextFile('credentials.json', JSON.stringify(queryParams, null, 2))
+            await putJson('credentials.json', queryParams)
             console.log('Login successful, exiting...')
             setTimeout(() => Deno.exit(0), 1000)
             return new Response(JSON.stringify(queryParams))

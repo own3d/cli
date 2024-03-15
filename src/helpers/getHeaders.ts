@@ -1,4 +1,8 @@
-export function getHeaders() {
+import { useStorage } from "../composables/useStorage.ts";
+
+const {get } = useStorage()
+
+export async function getHeaders() {
 
     const accessToken = Deno.env.get('ACCESS_TOKEN')
 
@@ -8,7 +12,8 @@ export function getHeaders() {
         }
     }
 
-    const credentials = JSON.parse(Deno.readTextFileSync('credentials.json'))
+    const credentials = JSON.parse(await get('credentials.json'))
+
     return {
         Authorization: `Bearer ${credentials.access_token}`,
     }
