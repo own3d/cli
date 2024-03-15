@@ -21,7 +21,7 @@ function fileExists(name: string) {
  * ├── .gitignore
  * ├── .own3d
  * │   └── manifest.json
- * └── server.ts
+ * └── index.ts
  *
  * @param args
  */
@@ -46,9 +46,9 @@ export function fnCreate(args: Args) {
     "name": "${name}",
     "version": "0.0.1",
     "description": "My new function",
-    "entrypoint": "server.ts"
+    "entrypoint": "index.ts"
 }`)
-    Deno.writeTextFileSync(`${name}/server.ts`, `Deno.serve((req) => new Response("Hello!"));
+    Deno.writeTextFileSync(`${name}/index.ts`, `Deno.serve((req) => new Response("Hello!"));
 
 interface Person {
   name: string;
