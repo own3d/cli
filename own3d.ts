@@ -1,9 +1,12 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-net --allow-run --allow-sys --quiet
 // deno-lint-ignore-file
+// noinspection JSIgnoredPromiseFromCall
+
 import { Args, parseArgs } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
 import { fnCreate } from './src/commands/fnCreate.ts'
 import { fnDeploy } from './src/commands/fnDeploy.ts'
 import { login } from './src/commands/login.ts'
+import {selfUpdate} from "./src/commands/selfUpdate.ts";
 
 const help: string = `own3d 0.0.1
 Command line tool for OWN3D Apps.
@@ -11,6 +14,7 @@ Command line tool for OWN3D Apps.
 SUBCOMMANDS:
     fn:create    Create a new edge function project
     fn:deploy    Deploy a edge function to the cloud
+    self-update  Update the CLI to the latest version
     login        Log in to OWN3D
 
 For more information, read the documentation at https://dev.own3d.tv/docs/cli/
@@ -27,6 +31,9 @@ switch (subcommand) {
         break
     case 'fn:run':
         console.log('Running...')
+        break
+    case 'self-update':
+        selfUpdate(args)
         break
     case 'login':
         login(args)
