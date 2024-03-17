@@ -1,11 +1,13 @@
 import {Args} from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
 import axios from 'npm:axios'
 import {getHeaders} from '../helpers/getHeaders.ts'
-import {compress} from "https://deno.land/x/zip@v1.2.5/mod.ts";
+import { compress } from "../helpers/compress.ts";
+import {join} from "../helpers/deps.ts";
 
 export async function fnDeploy(_args: Args) {
     const functionName: string = _args._[0] as string
-    const archiveName: string = `./temp.zip`
+
+    const archiveName: string = join(Deno.cwd(), 'archive.zip')
 
     if (typeof functionName !== 'string' || functionName.length === 0) {
         console.error('Please provide a name for the function')
@@ -32,9 +34,10 @@ export async function fnDeploy(_args: Args) {
 
     console.log(`- Compressing ${functionName} function...`)
 
-    const zipped: boolean = await compress(`./${functionName}`, archiveName, {
+    const zipped: boolean = await compress('.', archiveName, {
         overwrite: true,
-        flags: []
+        flags: [],
+        cwd: join(Deno.cwd(), functionName)
     })
 
     if (!zipped) {
@@ -46,7 +49,7 @@ export async function fnDeploy(_args: Args) {
     console.log(`- Deploying ${functionName} function...`)
 
     try {
-        const file = await Deno.readFile('./temp.zip');
+        const file = await Deno.readFile(archiveName);
         const formData = new FormData();
         formData.append('manifest', JSON.stringify(manifest));
         formData.append('file', new Blob([file]), 'filename.ext');
@@ -61,7 +64,10 @@ export async function fnDeploy(_args: Args) {
         })
     } catch (e) {
         console.error('Failed to deploy function')
-        console.error(e.response.data.message)
+        if(e.response?.data?.message)
+            console.error(e.response?.data.message)
+        else
+            console.error(e.message)
         Deno.exit(1)
     }
 
