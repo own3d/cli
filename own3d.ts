@@ -8,7 +8,7 @@ import { fnDeploy } from './src/commands/fnDeploy.ts'
 import { login } from './src/commands/login.ts'
 import {selfUpdate} from "./src/commands/selfUpdate.ts";
 
-const help: string = `own3d 0.0.1
+const help: string = `own3d 0.0.2
 Command line tool for OWN3D Apps.
 
 SUBCOMMANDS:
