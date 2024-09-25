@@ -8,7 +8,7 @@ import { fnDeploy } from './src/commands/fnDeploy.ts'
 import { login } from './src/commands/login.ts'
 import {selfUpdate} from "./src/commands/selfUpdate.ts";
 
-const help: string = `own3d 0.0.2
+const help: string = `own3d 0.0.3
 Command line tool for OWN3D Apps.
 
 SUBCOMMANDS:
@@ -40,7 +40,7 @@ switch (subcommand) {
         break
     default:
         if (args.version) {
-            console.log('0.0.1')
+            console.log('0.0.3')
             Deno.exit(0)
         }
         if (args.help) {
