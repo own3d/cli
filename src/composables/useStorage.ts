@@ -15,7 +15,7 @@ export function useStorage() {
         await Deno.writeTextFile(path(key), value);
     }
 
-    const putJson = async (key: string, value: any) => {
+    const putJson = async (key: string, value: string | object | number) => {
         await put(key, JSON.stringify(value, null, 2));
     }
 

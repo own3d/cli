@@ -1,76 +1,84 @@
-import {Args} from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
-import axios from 'npm:axios'
-import {getHeaders} from '../helpers/getHeaders.ts'
-import { compress } from "../helpers/compress.ts";
-import {join} from "../helpers/deps.ts";
+import type { Args } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
+import { join } from '../helpers/deps.ts'
+import { exists } from 'https://deno.land/std@0.220.1/fs/exists.ts'
+import { DockerFuncDirPath, Own3dCliDirPath } from '../utils.ts'
+import { useDeploy } from '../composables/useDeploy.ts'
+import remove = Deno.remove
+import { posixJoin } from 'https://deno.land/std@0.200.0/path/_join.ts'
 
-export async function fnDeploy(_args: Args) {
+const HumanSize = (bytes: number) => {
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+    if (bytes === 0) return '0 Byte'
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+export async function fnDeploy(_args: Args): Promise<number> {
+    const {bundleFunction, deployFunction} = useDeploy(_args)
     const functionName: string = _args._[0] as string
-
-    const archiveName: string = join(Deno.cwd(), 'archive.zip')
 
     if (typeof functionName !== 'string' || functionName.length === 0) {
         console.error('Please provide a name for the function')
-        Deno.exit(1)
+        return 1
     }
 
     // check if function contains a valid manifest
-    const manifestFile = `./${functionName}/.own3d/manifest.json`;
+    const manifestFile = join(Deno.cwd(), functionName, '.own3d', 'manifest.json')
     if (!Deno.statSync(manifestFile).isFile) {
         console.error('Invalid function, missing manifest')
-        Deno.exit(1)
+        return 1
     }
     const manifest = JSON.parse(Deno.readTextFileSync(manifestFile))
 
     if (!manifest) {
         console.error('Invalid function, missing manifest')
-        Deno.exit(1)
+        return 1
     }
 
     if (!manifest.name || !manifest.version || !manifest.entrypoint) {
         console.error('Invalid manifest, missing required fields')
-        Deno.exit(1)
+        return 1
     }
 
-    console.log(`- Compressing ${functionName} function...`)
+    // 2. Bundle Function
+    console.log(`- Bundling ${functionName} function...`)
 
-    const zipped: boolean = await compress('.', archiveName, {
-        overwrite: true,
-        flags: [],
-        cwd: join(Deno.cwd(), functionName)
-    })
+    const importMapPath: string = ''
+    const dockerEntrypointPath: string = posixJoin(DockerFuncDirPath, manifest.name, 'index.ts')
+    const compressed = await bundleFunction(functionName, manifest, dockerEntrypointPath, importMapPath)
 
-    if (!zipped) {
-        console.error('Failed to zip function')
-        Deno.exit(1)
-    }
+    console.log('✔ Function bundled')
 
-    console.log('✔ Function compressed')
-    console.log(`- Deploying ${functionName} function...`)
+    // 3. Deploy Function
+    const functionSize = HumanSize(compressed.length)
+    console.log(`- Deploying ${functionName} function (script size: ${functionSize})...`)
 
     try {
-        const file = await Deno.readFile(archiveName);
-        const formData = new FormData();
-        formData.append('manifest', JSON.stringify(manifest));
-        formData.append('file', new Blob([file]), 'filename.ext');
-        const response = await axios.post('http://localhost:8000/api/v1/edge-functions/deploy', formData, {
-            headers: await getHeaders()
-        })
+        const {data} = await deployFunction(manifest, compressed)
 
         console.log('✔ Deployment is live!')
 
-        response.data.domains.forEach((domain: string) => {
+        data.domains.forEach((domain: string) => {
             console.log(`Website URL: ${domain}`)
         })
     } catch (e) {
-        console.error('Failed to deploy function')
-        if(e.response?.data?.message)
+        // x emoji
+        console.error('✘ Failed to deploy function')
+        if (e.response?.data?.message)
             console.error(e.response?.data.message)
         else
             console.error(e.message)
-        Deno.exit(1)
+
+        if (await exists(Own3dCliDirPath)) {
+            await remove(Own3dCliDirPath, {recursive: true})
+        }
+
+        return 1
     }
 
-    // cleanup
-    await Deno.remove(archiveName)
+    if (await exists(Own3dCliDirPath)) {
+        await remove(Own3dCliDirPath, {recursive: true})
+    }
+
+    return 0
 }

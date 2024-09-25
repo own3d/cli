@@ -24,19 +24,19 @@ const args: Args = parseArgs(Deno.args)
 const subcommand = args._.shift()
 switch (subcommand) {
     case 'fn:create':
-        fnCreate(args)
+        Deno.exit(await fnCreate(args))
         break
     case 'fn:deploy':
-        fnDeploy(args)
+        Deno.exit(await fnDeploy(args))
         break
     case 'fn:run':
         console.log('Running...')
         break
     case 'self-update':
-        selfUpdate(args)
+        Deno.exit(await selfUpdate(args))
         break
     case 'login':
-        login(args)
+        Deno.exit(await login(args))
         break
     default:
         if (args.version) {

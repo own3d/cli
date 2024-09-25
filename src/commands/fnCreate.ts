@@ -1,4 +1,4 @@
-import {Args} from "https://deno.land/std@0.207.0/cli/parse_args.ts";
+import type { Args } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
 
 function fileExists(name: string) {
     try {
@@ -25,17 +25,17 @@ function fileExists(name: string) {
  *
  * @param args
  */
-export function fnCreate(args: Args) {
+export function fnCreate(args: Args): Proise<number> {
     const name = args._[0]
 
     if (typeof name !== 'string' || name.length === 0) {
         console.error('Please provide a name for the function')
-        Deno.exit(1)
+        return 1
     }
 
     if (fileExists(name)) {
         console.error('A directory with the same name already exists')
-        Deno.exit(1)
+        return 1
     }
 
     console.log(`Creating new function: ${name}`)
@@ -61,4 +61,6 @@ function greet(person: Person) {
 
 console.log(greet({ name: "Alice", age: 36 }));`)
     console.log('Done!')
+
+    return 0
 }

@@ -1,4 +1,4 @@
-import { Args } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
+import type { Args } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
 import * as uuid from 'https://deno.land/std@0.207.0/uuid/mod.ts'
 import { stringify } from 'https://cdn.skypack.dev/querystring'
 import { open } from 'https://deno.land/x/open/index.ts'
@@ -7,7 +7,7 @@ import { useStorage } from "../composables/useStorage.ts";
 
 const {putJson} = useStorage()
 
-async function fetchUser(queryParams: any) {
+async function fetchUser(queryParams: Record<string, string>) {
     try {
         console.log('Fetching user information...')
         const user = await axios.get('https://id.stream.tv/api/users/@me', {
@@ -17,12 +17,13 @@ async function fetchUser(queryParams: any) {
         })
         console.log(`Logged in as ${user.data.name}`)
         queryParams.user = user.data
-    } catch (error) {
+    // deno-lint-ignore no-explicit-any
+    } catch (error: any) {
         console.error(error.message)
     }
 }
 
-export async function login(_args: Args) {
+export function login(_args: Args): Promise<number> {
     const state = uuid.v1.generate()
     const authorizeUrl = `https://id.stream.tv/oauth/authorize?${stringify({
         client_id: '9853a006-86a1-4f02-bfa2-d58daa3581a8',
@@ -40,23 +41,24 @@ export async function login(_args: Args) {
         setTimeout(() => open('http://localhost:1337/redirect'), 1000)
     }
 
-    Deno.serve({port: 1337}, async (req: Request) => {
-        if (req.url.endsWith('/redirect')) {
-            return new Response('', {status: 302, headers: {Location: authorizeUrl}})
-        }
-        if (req.url.endsWith('/callback')) {
-            const queryParams = await req.json()
-            if (!state || state !== queryParams.state) {
-                return new Response('Invalid state.')
+    return new Promise((resolve) => {
+        Deno.serve({port: 1337}, async (req: Request) => {
+            if (req.url.endsWith('/redirect')) {
+                return new Response('', {status: 302, headers: {Location: authorizeUrl}})
             }
-            queryParams.expires_at = new Date(Date.now() + queryParams.expires_in * 1000)
-            await fetchUser(queryParams)
-            await putJson('credentials.json', queryParams)
-            console.log('Login successful, exiting...')
-            setTimeout(() => Deno.exit(0), 1000)
-            return new Response(JSON.stringify(queryParams))
-        }
-        return new Response(`<!DOCTYPE html>
+            if (req.url.endsWith('/callback')) {
+                const queryParams = await req.json()
+                if (!state || state !== queryParams.state) {
+                    return new Response('Invalid state.')
+                }
+                queryParams.expires_at = new Date(Date.now() + queryParams.expires_in * 1000)
+                await fetchUser(queryParams)
+                await putJson('credentials.json', queryParams)
+                console.log('Login successful, exiting...')
+                setTimeout(() => resolve(0), 1000)
+                return new Response(JSON.stringify(queryParams))
+            }
+            return new Response(`<!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
@@ -98,5 +100,6 @@ export async function login(_args: Args) {
 </script>
 </body>
 </html>`, {headers: {'Content-Type': 'text/html'}})
+        })
     })
 }
