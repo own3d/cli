@@ -2,7 +2,7 @@ import type {Args} from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 
 export async function selfUpdate(_args: Args): Promise<number> {
     const command = new Deno.Command(Deno.execPath(), {
-        args: ['install', '-Arf', 'https://cli.own3d.dev']
+        args: ['install', '-Arfg', 'https://cli.own3d.dev']
     })
 
     console.log('Updating...')
