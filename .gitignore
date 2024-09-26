@@ -1,4 +1,14 @@
 .idea
+
+# cli files
 .own3d-cli
 credentials.json
+
+# functions
 test
+
+# extensions
+assets
+extension-dist
+archive.zip
+manifest.yaml

@@ -56,7 +56,7 @@ export function useDeploy(_args: Args) {
             type: 'application/json',
         }), 'manifest.json')
 
-        return axios.post(`http://localhost:8000/api/v1/edge-functions/deploy`, data, {
+        return axios.post(`https://ext.own3d.pro/v1/edge-functions/deploy`, data, {
             headers: await getHeaders(),
         })
     }

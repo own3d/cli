@@ -1,4 +1,5 @@
 import { useStorage } from "../composables/useStorage.ts";
+import { version } from '../../own3d.ts'
 
 const {get } = useStorage()
 

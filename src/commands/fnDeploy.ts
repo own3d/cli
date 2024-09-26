@@ -1,17 +1,10 @@
 import type { Args } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
 import { join } from '../helpers/deps.ts'
 import { exists } from 'https://deno.land/std@0.220.1/fs/exists.ts'
-import { DockerFuncDirPath, Own3dCliDirPath } from '../utils.ts'
+import { DockerFuncDirPath, HumanSize, Own3dCliDirPath } from '../utils.ts'
 import { useDeploy } from '../composables/useDeploy.ts'
 import remove = Deno.remove
 import { posixJoin } from 'https://deno.land/std@0.200.0/path/_join.ts'
-
-const HumanSize = (bytes: number) => {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
-    if (bytes === 0) return '0 Byte'
-    const i = Math.floor(Math.log(bytes) / Math.log(1024))
-    return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i]
-}
 
 export async function fnDeploy(_args: Args): Promise<number> {
     const {bundleFunction, deployFunction} = useDeploy(_args)
