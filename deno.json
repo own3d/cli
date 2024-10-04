@@ -1,6 +1,6 @@
 {
   "name": "@own3d/cli",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "exports": "./own3d.ts",
   "tasks": {
     "dev": "deno run --watch own3d.ts"
