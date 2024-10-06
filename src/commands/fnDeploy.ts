@@ -1,8 +1,9 @@
 import type { Args } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import axios from "npm:axios";
 import { getHeaders } from "../helpers/getHeaders.ts";
-import { compress, getFilteredFiles } from "../helpers/compress.ts";
+import { getFilteredFiles } from "../helpers/compress.ts";
 import { join } from "../helpers/deps.ts";
+import { JSZip } from "https://deno.land/x/jszip@0.11.0/mod.ts";
 
 export async function fnDeploy(_args: Args): Promise<number> {
     const directoryName: string = _args._[0] as string;
@@ -40,21 +41,13 @@ export async function fnDeploy(_args: Args): Promise<number> {
         ".own3d",
     ]);
 
-    // Use the contents of the current directory for compression
-    const zipped: boolean = await compress(
-        filesToCompress,
-        archiveName,
-        {
-            overwrite: true,
-            flags: [],
-            cwd: projectDirectory,
-        },
-    );
+    const zip = new JSZip();
 
-    if (!zipped) {
-        console.error("Failed to zip function");
-        return 1;
+    for (const file of filesToCompress) {
+        zip.addFile(file, await Deno.readFile(join(projectDirectory, file)));
     }
+
+    await zip.writeZip(archiveName);
 
     console.log("✔ Function compressed");
     console.log(`- Deploying ${manifest.name} function...`);

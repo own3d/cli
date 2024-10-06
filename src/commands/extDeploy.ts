@@ -3,9 +3,10 @@ import { getHeaders } from '../helpers/getHeaders.ts'
 import { join } from '../helpers/deps.ts'
 import axios from 'npm:axios'
 import { parse, stringify } from 'https://deno.land/std@0.224.0/yaml/mod.ts'
-import { compress } from '../helpers/compress.ts'
 import { exists } from 'https://deno.land/std@0.220.1/fs/exists.ts'
 import { HumanSize } from '../utils.ts'
+import { getFilteredFiles } from '../helpers/compress.ts'
+import { JSZip } from 'https://deno.land/x/jszip@0.11.0/mod.ts'
 
 export interface ExtensionManifest {
     schema_version: number
@@ -86,14 +87,15 @@ export interface ExtensionManifest {
 }
 
 export async function extDeploy(args: Args): Promise<number> {
+    const archiveName: string = join(Deno.cwd(), 'extension.zip')
     // check if extension contains a valid manifest
-    const manifestFile = join(Deno.cwd(), args['manifest'] ?? 'manifest.yaml')
+    const manifestFile: string = join(Deno.cwd(), args['manifest'] ?? 'manifest.yaml')
     if (!Deno.statSync(manifestFile).isFile) {
         console.error('Invalid extension, missing manifest')
         return 1
     }
 
-    const manifest: ExtensionManifest = parse(Deno.readTextFileSync(manifestFile))
+    const manifest: ExtensionManifest = parse(Deno.readTextFileSync(manifestFile)) as ExtensionManifest
 
     if (!manifest) {
         console.error('Invalid extension, invalid manifest')
@@ -105,33 +107,29 @@ export async function extDeploy(args: Args): Promise<number> {
         return 1
     }
 
-    console.log(`- Bundling extension...`)
+    console.log(`- Compressing extension...`)
 
-    const distFolder = join(Deno.cwd(), args['dist'] ?? 'dist')
+    const distFolder: string = join(Deno.cwd(), args['dist'] ?? 'dist')
     if (!Deno.statSync(distFolder).isDirectory) {
         console.error('Invalid extension, missing dist folder')
         return 1
     }
 
-    // get all files in the dist folder
-    const files = []
-    for await (const entry of Deno.readDir(distFolder)) {
-        files.push(join(distFolder, entry.name))
+    // Get filtered files (excluding those matching .gitignore patterns)
+    const filesToCompress = await getFilteredFiles(distFolder, [
+        "archive.zip",
+        ".own3d",
+    ]);
+
+    const zip = new JSZip();
+
+    for (const file of filesToCompress) {
+        zip.addFile(file, await Deno.readFile(join(distFolder, file)));
     }
 
-    // compress the dist folder
-    const archiveName = join(Deno.cwd(), 'extension.zip')
-    const success = await compress(files, archiveName, {
-        flags: [],
-        overwrite: true,
-    })
+    await zip.writeZip(archiveName);
 
-    if (!success) {
-        console.error('Failed to compress extension')
-        return 1
-    }
-
-    console.log('✔ Extension bundled')
+    console.log('✔ Extension compressed')
 
     const extensionSize = HumanSize(Deno.statSync(archiveName).size)
     console.log(`- Deploying extension (script size: ${extensionSize})...`)
