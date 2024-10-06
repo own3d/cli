@@ -71,17 +71,39 @@ async function parseGitignore(cwd: string): Promise<string[]> {
 }
 
 // Function to filter out files matching .gitignore patterns
-export async function getFilteredFiles(cwd: string, patterns : string[]): Promise<string[]> {
+export async function getFilteredFiles(cwd: string, patterns: string[]): Promise<string[]> {
     const gitignorePatterns = await parseGitignore(cwd);
-    gitignorePatterns.push(...patterns)
+    gitignorePatterns.push(...patterns);
     const allFiles: string[] = [];
 
-    // Read all files in the directory
-    for await (const dirEntry of Deno.readDir(cwd)) {
-        if (!gitignorePatterns.some(pattern => dirEntry.name.match(pattern))) {
-            allFiles.push(dirEntry.name);
+    // Helper function to check if a file matches any of the ignore patterns
+    function isIgnored(filePath: string): boolean {
+        return gitignorePatterns.some(pattern => new RegExp(pattern).test(filePath));
+    }
+
+    // Recursive function to collect files
+    async function collectFiles(dir: string) {
+        for await (const dirEntry of Deno.readDir(dir)) {
+            const fullPath = `${dir}/${dirEntry.name}`;
+
+            // Skip if the file is ignored
+            if (isIgnored(fullPath)) {
+                continue;
+            }
+
+            if (dirEntry.isDirectory) {
+                // Recurse into subdirectories
+                await collectFiles(fullPath);
+            } else if (dirEntry.isFile) {
+                // Strip the cwd and add relative paths
+                const relativePath = fullPath.slice(cwd.length + 1);
+                allFiles.push(relativePath);
+            }
         }
     }
+
+    // Start the recursion from the current directory
+    await collectFiles(cwd);
 
     return allFiles;
 }

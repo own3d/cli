@@ -11,9 +11,14 @@ export async function fnDeploy(_args: Args): Promise<number> {
 
     // check if function contains a valid manifest
     const manifestFile: string = join(projectDirectory, ".own3d", "manifest.json");
-    if (!Deno.statSync(manifestFile).isFile) {
+    try {
+        if (!Deno.statSync(manifestFile).isFile) {
+            console.error("Invalid function, missing manifest");
+            return 1;
+        }
+    } catch (_e) {
         console.error("Invalid function, missing manifest");
-        return 1;
+        return 1
     }
     const manifest = JSON.parse(Deno.readTextFileSync(manifestFile));
 
@@ -65,7 +70,7 @@ export async function fnDeploy(_args: Args): Promise<number> {
         );
         formData.append("file", new Blob([file]), "function.zip");
         const response = await axios.post(
-            "http://localhost:8000/api/v1/edge-functions/deploy",
+            "https://ext.own3d.pro/v1/edge-functions/deploy",
             formData,
             {
                 headers: await getHeaders(),
@@ -80,7 +85,7 @@ export async function fnDeploy(_args: Args): Promise<number> {
     } catch (e) {
         console.error("Failed to deploy function");
         if (e.response?.data?.message) {
-            console.error(e.response?.data.message);
+            console.error(e.response.data.message);
         } else {
             console.error(e.message);
         }

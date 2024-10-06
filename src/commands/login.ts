@@ -1,7 +1,7 @@
 import type { Args } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
 import * as uuid from 'https://deno.land/std@0.207.0/uuid/mod.ts'
 import { stringify } from 'https://cdn.skypack.dev/querystring'
-import { open } from 'https://deno.land/x/open/index.ts'
+import { open } from 'https://deno.land/x/open@v0.0.6/index.ts'
 import axios from 'npm:axios'
 import { useStorage } from "../composables/useStorage.ts";
 

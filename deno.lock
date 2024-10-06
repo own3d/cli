@@ -247,6 +247,7 @@
     "https://cdn.skypack.dev/-/querystring@v0.2.1-0f5RlaXkNjMOXD0PAWkT/dist=es2019,mode=imports/optimized/querystring.js": "c3a3ebdca908144801f7c7f47449ff3bdedc2cc5e9e71e2efb58c7798add1e7a",
     "https://cdn.skypack.dev/querystring": "7a442ce2713aff9abc3c588012b1cc8070aaf9793317f09a9eaed7da3350c750",
     "https://deno.land/std@0.106.0/path/_constants.ts": "1247fee4a79b70c89f23499691ef169b41b6ccf01887a0abd131009c5581b853",
+    "https://deno.land/std@0.106.0/path/_interface.ts": "1fa73b02aaa24867e481a48492b44f2598cd9dfa513c7b34001437007d3642e4",
     "https://deno.land/std@0.106.0/path/_util.ts": "2e06a3b9e79beaf62687196bd4b60a4c391d862cfa007a20fc3a39f778ba073b",
     "https://deno.land/std@0.106.0/path/posix.ts": "b81974c768d298f8dcd2c720229639b3803ca4a241fa9a355c762fa2bc5ef0c1",
     "https://deno.land/std@0.133.0/_deno_unstable.ts": "23a1a36928f1b6d3b0170aaa67de09af12aa998525f608ff7331b9fb364cbde6",
