@@ -8,6 +8,7 @@ import { fnDeploy } from './src/commands/fnDeploy.ts'
 import { login } from './src/commands/login.ts'
 import { selfUpdate } from './src/commands/selfUpdate.ts'
 import { extDeploy } from './src/commands/extDeploy.ts'
+import { extInit } from "./src/commands/extInit.ts";
 import { ExtDeployHelp } from './src/utils.ts'
 import axios from 'npm:axios'
 
@@ -21,6 +22,7 @@ Command line tool for OWN3D Apps.
 
 SUBCOMMANDS:
     ext:deploy   Deploy an extension to the cloud
+    ext:init     Initialize a new extension project
     fn:create    Create a new edge function project
     fn:deploy    Deploy a edge function to the cloud
     self-update  Update the CLI to the latest version
@@ -44,25 +46,23 @@ if (args['help'] || args['h']) {
     Deno.exit(0)
 }
 
+// noinspection FallThroughInSwitchStatementJS
 switch (subcommand) {
     case 'ext:deploy':
         Deno.exit(await extDeploy(args))
-        break
+    case 'ext:init':
+        Deno.exit(await extInit(args))
     case 'fn:create':
         Deno.exit(await fnCreate(args))
-        break
     case 'fn:deploy':
         Deno.exit(await fnDeploy(args))
-        break
     case 'fn:run':
         console.log('Running...')
         break
     case 'self-update':
         Deno.exit(await selfUpdate(args))
-        break
     case 'login':
         Deno.exit(await login(args))
-        break
     default:
         if (args.version) {
             console.log(version)
