@@ -80,7 +80,6 @@ export async function extDeploy(args: Args): Promise<number> {
   } catch (e: any) {
     // x emoji
     console.error("✘ Failed to deploy extension");
-    console.log(e)
     if (e.response?.data?.message) {
       console.error(e.response?.data.message);
     } else {
@@ -154,7 +153,7 @@ async function deployExtension(
     data.append("stage", "local-test");
   }
 
-  return axios.post(`http://localhost:8000/api/v1/extensions/deploy`, data, {
+  return axios.post(`https://ext.own3d.pro/v1/extensions/deploy`, data, {
     headers: {
       ...await getHeaders(),
       "Accept": "application/json",
