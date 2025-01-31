@@ -21,10 +21,11 @@ Options:
     --manifest      Path to the extension's manifest file [default: manifest.yaml]
     --assets        Upload all assets (logos, screenshots, etc.) [default: false]
     --stage         Publish to a specific stage [default: local-test]
+    --manifest-only Only upload the manifest file [default: false]
 `
 
-export const HumanSize = (bytes: number) => {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+export const HumanSize = (bytes: number): string => {
+    const sizes: string[] = ['Bytes', 'KB', 'MB', 'GB', 'TB']
     if (bytes === 0) return '0 Byte'
     const i = Math.floor(Math.log(bytes) / Math.log(1024))
     return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i]
