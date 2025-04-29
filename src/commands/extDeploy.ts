@@ -46,8 +46,8 @@ export async function extDeploy(args: Args): Promise<number> {
 
     // Get filtered files (excluding those matching .gitignore patterns)
     const filesToCompress = await getFilteredFiles(distFolder, [
-      "archive.zip",
-      ".own3d",
+      "archive\\.zip",
+      "\\.own3d",
     ]);
 
     const zip = new JSZip();
