@@ -12,7 +12,7 @@ import { extInit } from "./src/commands/extInit.ts";
 import { ExtDeployHelp } from './src/utils.ts'
 import axios from 'npm:axios'
 
-const version: string = '0.1.0-rc.4'
+const version: string = '0.1.0-rc.5'
 
 // set user agent for axios
 axios.defaults.headers['User-Agent'] = `own3d-cli/${version}`
