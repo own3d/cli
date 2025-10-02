@@ -1,19 +1,20 @@
 import type {Args} from "https://deno.land/std@0.207.0/cli/parse_args.ts";
-import { bold, green, red, cyan, bgRed, bgGreen } from "../helpers/colors.ts";
+import { setLoggerQuiet, step, success, error as logError } from "../helpers/logger.ts";
 
 export async function selfUpdate(_args: Args): Promise<number> {
     const quiet = !!(_args.quiet || _args.q);
+    setLoggerQuiet(quiet);
     const command = new Deno.Command(Deno.execPath(), {
         args: ['install', '-Arfg', 'https://cli.own3d.dev']
     })
 
-    if (!quiet) console.log(cyan('➜ Updating...'));
+    step('Updating...');
     const {code} = await command.output();
 
     if (code === 0) {
-        if (!quiet) console.log(bgGreen(bold(' SUCCESS ')) + ' ' + green('Updated successfully!'));
+        success('Updated successfully!');
     } else {
-        console.error(bgRed(bold(' FAIL ')) + ' ' + red('Failed to update!'));
+        logError('Failed to update!');
     }
 
     return code;

@@ -4,28 +4,30 @@ import { stringify } from 'https://cdn.skypack.dev/querystring'
 import { open } from 'https://deno.land/x/open@v0.0.6/index.ts'
 import axios from 'npm:axios'
 import { useStorage } from "../composables/useStorage.ts";
-import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "../helpers/colors.ts";
+import { setLoggerQuiet, step, success, error as logError, info, raw } from "../helpers/logger.ts";
 
 const {putJson} = useStorage()
 
 async function fetchUser(queryParams: Record<string, string>, quiet: boolean) {
+    setLoggerQuiet(quiet);
     try {
-        if (!quiet) console.log(cyan('➜ Fetching user information...'));
+        step('Fetching user information...');
         const user = await axios.get('https://id.stream.tv/api/users/@me', {
             headers: {
                 Authorization: `Bearer ${queryParams.access_token}`,
             },
         })
-        if (!quiet) console.log(green(`✔ Logged in as ${user.data.name}`));
-        queryParams.user = user.data
-    // deno-lint-ignore no-explicit-any
-    } catch (error: any) {
-        console.error(bgRed(bold(' FAIL ')) + ' ' + red(error.message))
+        success(`Logged in as ${user.data.name}`);
+        // deno-lint-ignore no-explicit-any
+        (queryParams as any).user = user.data;
+    } catch (error: any) { // deno-lint-ignore no-explicit-any
+        logError(error.message)
     }
 }
 
 export function login(_args: Args): Promise<number> {
     const quiet = !!(_args.quiet || _args.q);
+    setLoggerQuiet(quiet);
     const state = uuid.v1.generate()
     const authorizeUrl = `https://id.stream.tv/oauth/authorize?${stringify({
         client_id: '9853a006-86a1-4f02-bfa2-d58daa3581a8',
@@ -35,10 +37,10 @@ export function login(_args: Args): Promise<number> {
         state,
     })}`
 
-    if (!quiet) console.log(magenta('ℹ️  Please follow the instructions in the browser...'))
+    info('ℹ️  Please follow the instructions in the browser...')
 
     if (_args['console-only']) {
-        console.log(authorizeUrl)
+        raw(authorizeUrl)
     } else {
         setTimeout(() => open('http://localhost:1337/redirect'), 1000)
     }
@@ -49,14 +51,14 @@ export function login(_args: Args): Promise<number> {
                 return new Response('', {status: 302, headers: {Location: authorizeUrl}})
             }
             if (req.url.endsWith('/callback')) {
-                const queryParams = await req.json()
+                const queryParams = await req.json() as Record<string, string | any>; // deno-lint-ignore no-explicit-any
                 if (!state || state !== queryParams.state) {
                     return new Response('Invalid state.')
                 }
-                queryParams.expires_at = new Date(Date.now() + queryParams.expires_in * 1000)
-                await fetchUser(queryParams, quiet)
+                (queryParams as any).expires_at = new Date(Date.now() + Number(queryParams.expires_in) * 1000)
+                await fetchUser(queryParams as Record<string, string>, quiet)
                 await putJson('credentials.json', queryParams)
-                if (!quiet) console.log(bgGreen(bold(' SUCCESS ')) + ' ' + green('Login successful, exiting...'))
+                success('Login successful, exiting...')
                 setTimeout(() => resolve(0), 1000)
                 return new Response(JSON.stringify(queryParams))
             }

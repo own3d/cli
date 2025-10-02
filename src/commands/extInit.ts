@@ -3,8 +3,7 @@ import type { Args } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import { join } from "../helpers/deps.ts";
 import axios from "npm:axios";
 import {stringify} from "https://deno.land/std@0.224.0/yaml/stringify.ts";
-import { bold, cyan, magenta, red, yellow, green } from "../helpers/colors.ts";
-import { step, info, success, error as logError } from "../helpers/logger.ts";
+import { step, info, success, error as logError, setLoggerQuiet } from "../helpers/logger.ts";
 
 async function createManifestFile(manifestFile: string, extension: any, version: any, quiet: boolean) {
     const manifest: Partial<ExtensionManifest> = {
@@ -78,6 +77,7 @@ async function createManifestFile(manifestFile: string, extension: any, version:
 
 export async function extInit(args: Args): Promise<number> {
     const quiet = !!(args.quiet || args.q);
+    setLoggerQuiet(quiet);
     // check if folder is already initialized
     const manifestFile: string = join(
         Deno.cwd(),

@@ -1,6 +1,6 @@
 import type { Args } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import { useStorage } from "../composables/useStorage.ts";
-import { bold, green, red, yellow, cyan } from "../helpers/colors.ts";
+import { setLoggerQuiet, info, success, warn, error as logError, raw } from "../helpers/logger.ts";
 
 const storage = useStorage();
 const CONFIG_FILE = "cli.json";
@@ -35,16 +35,18 @@ export function saveCliConfig(cfg: Partial<CliConfig>): void {
 }
 
 export async function configSet(args: Args): Promise<number> {
+  const quiet = !!(args.quiet || args.q);
+  setLoggerQuiet(quiet);
   const key = args._[0] as string | undefined;
   const valueRaw = args._[1] as string | undefined;
   if (!key) {
-    console.error(red("Usage: own3d config:set <key> <value>"));
-    console.error(yellow("Keys: quiet (true|false), noColor (true|false)"));
+    logError("Usage: own3d config:set <key> <value>");
+    warn("Keys: quiet (true|false), noColor (true|false)");
     return 1;
   }
   const normalizedKey = key as keyof CliConfig;
   if (!['quiet', 'noColor'].includes(normalizedKey)) {
-    console.error(red(`Unknown key: ${key}`));
+    logError(`Unknown key: ${key}`);
     return 1;
   }
   let value: boolean;
@@ -54,25 +56,27 @@ export async function configSet(args: Args): Promise<number> {
     value = !current[normalizedKey];
   } else {
     if (!/^(true|false)$/i.test(valueRaw)) {
-      console.error(red("Value must be true or false"));
+      logError("Value must be true or false");
       return 1;
     }
     value = /true/i.test(valueRaw);
   }
   saveCliConfig({ [normalizedKey]: value } as Partial<CliConfig>);
   const label = normalizedKey === 'noColor' ? '--no-color' : '--quiet';
-  console.log(green(`Config updated: ${normalizedKey}=${value}`));
+  success(`Config updated: ${normalizedKey}=${value}`);
   if (normalizedKey === 'noColor') {
-    console.log(cyan(`Hint: pass ${label} for one-off usage.`));
+    info(`Hint: pass ${label} for one-off usage.`);
   }
   return 0;
 }
 
-export async function configShow(_args: Args): Promise<number> {
+export async function configShow(args: Args): Promise<number> {
+  const quiet = !!(args.quiet || args.q);
+  setLoggerQuiet(quiet);
   const cfg = loadCliConfig();
-  console.log(bold("CLI Preferences:"));
-  console.log(` quiet   : ${cfg.quiet}`);
-  console.log(` noColor : ${cfg.noColor}`);
+  info("CLI Preferences:");
+  raw(` quiet   : ${cfg.quiet}`);
+  raw(` noColor : ${cfg.noColor}`);
   return 0;
 }
 
@@ -90,4 +94,3 @@ function getBasePath(): string {
   return (Deno.env.get('HOME') ?? '.') + '/.config/own3d';
 }
 function storagePath(name: string): string { return `${getBasePath()}/${name}`; }
-
