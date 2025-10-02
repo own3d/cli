@@ -11,8 +11,26 @@ import {
   red,
   yellow,
 } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { useStorage } from "../composables/useStorage.ts";
 
 const BASE_URL = "https://ext.own3d.pro/v1";
+const storage = useStorage();
+const DEFAULT_CODESPACE_FILE = 'codespace.json';
+
+async function setDefaultCodespaceId(id: string) {
+  try {
+    await storage.putJson(DEFAULT_CODESPACE_FILE, { current: id, updated_at: new Date().toISOString() });
+  } catch (_e) { /* ignore */ }
+}
+
+async function getDefaultCodespaceId(): Promise<string | undefined> {
+  try {
+    const raw = await storage.get(DEFAULT_CODESPACE_FILE);
+    const json = JSON.parse(raw);
+    if (json?.current && typeof json.current === 'string') return json.current;
+  } catch (_e) { /* ignore */ }
+  return undefined;
+}
 
 function logErrorPrefix() {
   return bgRed(bold(" FAIL ")) + " ";
@@ -78,6 +96,10 @@ export async function csCreate(args: Args): Promise<number> {
 
     console.log(logSuccessPrefix() + green("Codespace created"));
     console.log(magenta(`ID: ${data.id}`));
+    if (!args["no-default"]) {
+      await setDefaultCodespaceId(data.id);
+      console.log(cyan(`Set as default codespace (use 'own3d cs:use <id>' to change).`));
+    }
     return 0;
   } catch (e) {
     printAxiosError(e);
@@ -85,18 +107,49 @@ export async function csCreate(args: Args): Promise<number> {
   }
 }
 
-function ensureId(args: Args): string {
-  const id = args._[0];
-  if (typeof id !== "string" || !id.length) {
-    console.error(logErrorPrefix() + red("Missing <codespace_id> argument"));
-    Deno.exit(1);
+// New command: cs:use <id>
+export async function csUse(args: Args): Promise<number> {
+  const id = args._[0] as string || (args.id as string);
+  if (!id) {
+    console.error(logErrorPrefix() + red("Missing <codespace_id> argument. Usage: own3d cs:use <id>"));
+    return 1;
   }
-  return id;
+  await setDefaultCodespaceId(id);
+  console.log(logSuccessPrefix() + green(`Default codespace set to ${id}`));
+  return 0;
+}
+
+function ensureId(args: Args): string {
+  const provided = (args._[0] && typeof args._[0] === 'string') ? args._[0] as string : (typeof args.id === 'string' ? args.id : undefined);
+  if (provided) return provided;
+  // fallback to stored default
+  // NOTE: ensureId cannot be async easily, so throw marker and handle outside OR convert callers to async; easier: promote ensureId to async.
+  throw new Error('__NEED_ASYNC_ID__');
+}
+
+// Async wrapper for commands needing id (refactor usages below)
+async function resolveId(args: Args): Promise<string> {
+  const positional = (args._[0] && typeof args._[0] === 'string') ? args._[0] as string : undefined;
+  const flagId = typeof args.id === 'string' ? args.id : undefined;
+  if (positional) return positional;
+  if (flagId) return flagId;
+  const envId = Deno.env.get('OWN3D_CODESPACE_ID');
+  if (envId) {
+    console.log(cyan(`Using codespace from ENV OWN3D_CODESPACE_ID=${envId}`));
+    return envId;
+  }
+  const stored = await getDefaultCodespaceId();
+  if (stored) {
+    console.log(cyan(`Using default codespace: ${stored} (override with explicit <id> / --id or env OWN3D_CODESPACE_ID)`));
+    return stored;
+  }
+  console.error(logErrorPrefix() + red("No codespace id provided and no default set. Use 'own3d cs:use <id>' or pass an id."));
+  Deno.exit(1);
 }
 
 // cs:tree <id>
 export async function csTree(args: Args): Promise<number> {
-  const id = ensureId(args);
+  const id = await resolveId(args);
   const wantJson = !!args.json;
   const showIds = !!args.ids;
   const noColor = !!args["no-color"];
@@ -135,7 +188,7 @@ export async function csTree(args: Args): Promise<number> {
 
 // cs:ls <id> --path
 export async function csLs(args: Args): Promise<number> {
-  const id = ensureId(args);
+  const id = await resolveId(args);
   const path = args.path || "/";
   const wantJson = !!args.json;
   const longOutput = !!(args.long || args.l);
@@ -272,7 +325,7 @@ function dim(str: string): string {
 
 // cs:read <id> --path
 export async function csRead(args: Args): Promise<number> {
-  const id = ensureId(args);
+  const id = await resolveId(args);
   const path = requireArg(args, "path");
   try {
     const { data } = await axios.get(`${BASE_URL}/codespaces/${id}/fs/file`, {
@@ -289,7 +342,7 @@ export async function csRead(args: Args): Promise<number> {
 
 // cs:write <id> --path --file
 export async function csWrite(args: Args): Promise<number> {
-  const id = ensureId(args);
+  const id = await resolveId(args);
   const path = requireArg(args, "path");
   const filePath = requireArg(
     args,
@@ -311,9 +364,7 @@ export async function csWrite(args: Args): Promise<number> {
     return 0;
   } catch (e) {
     if (e instanceof Deno.errors.NotFound) {
-      console.error(
-        logErrorPrefix() + red(`Local file not found: ${filePath}`),
-      );
+      console.error(logErrorPrefix() + red(`Local file not found: ${filePath}`));
       return 1;
     }
     printAxiosError(e);
@@ -323,15 +374,15 @@ export async function csWrite(args: Args): Promise<number> {
 
 // cs:rm <id> --path
 export async function csRm(args: Args): Promise<number> {
-  const id = ensureId(args);
-  const path = requireArg(args, "path");
+  const id = await resolveId(args);
+  const path = requireArg(args, 'path');
   console.log(cyan(`➜ Deleting: ${path}`));
   try {
     await axios.delete(`${BASE_URL}/codespaces/${id}/fs/rm`, {
-      headers: await getHeaders(),
-      params: { path },
+      headers: { ...(await getHeaders()), 'Content-Type': 'application/json' },
+      data: { path },
     });
-    console.log(logSuccessPrefix() + green("Deleted"));
+    console.log(logSuccessPrefix() + green('Deleted'));
     return 0;
   } catch (e) {
     printAxiosError(e);
@@ -341,17 +392,11 @@ export async function csRm(args: Args): Promise<number> {
 
 // cs:reset <id>
 export async function csReset(args: Args): Promise<number> {
-  const id = ensureId(args);
-  console.log(
-    yellow(
-      "⚠️  Resetting filesystem to repository state (all changes lost)...",
-    ),
-  );
+  const id = await resolveId(args);
+  console.log(yellow('⚠️  Resetting filesystem to repository state (all changes lost)...'));
   try {
-    await axios.post(`${BASE_URL}/codespaces/${id}/fs/reset`, undefined, {
-      headers: await getHeaders(),
-    });
-    console.log(logSuccessPrefix() + green("Filesystem reset"));
+    await axios.post(`${BASE_URL}/codespaces/${id}/fs/reset`, undefined, { headers: await getHeaders() });
+    console.log(logSuccessPrefix() + green('Filesystem reset'));
     return 0;
   } catch (e) {
     printAxiosError(e);
@@ -361,13 +406,11 @@ export async function csReset(args: Args): Promise<number> {
 
 // cs:sync <id>
 export async function csSync(args: Args): Promise<number> {
-  const id = ensureId(args);
-  console.log(cyan("➜ Syncing filesystem to CDN..."));
+  const id = await resolveId(args);
+  console.log(cyan('➜ Syncing filesystem to CDN...'));
   try {
-    await axios.post(`${BASE_URL}/codespaces/${id}/fs/sync`, undefined, {
-      headers: await getHeaders(),
-    });
-    console.log(logSuccessPrefix() + green("Synced to CDN"));
+    await axios.post(`${BASE_URL}/codespaces/${id}/fs/sync`, undefined, { headers: await getHeaders() });
+    console.log(logSuccessPrefix() + green('Synced to CDN'));
     return 0;
   } catch (e) {
     printAxiosError(e);
@@ -375,16 +418,13 @@ export async function csSync(args: Args): Promise<number> {
   }
 }
 
-// Utility to sort entries: dirs first then files, alphabetical
+// Utility to sort entries: dirs first then files, alphabetical (ensure present if truncated earlier)
 function sortEntries(entries: any[]): any[] { // deno-lint-ignore no-explicit-any
   return entries.sort((a, b) => {
-    const at = (a.type === "directory" || a.type === "dir") ? 0 : 1;
-    const bt = (b.type === "directory" || b.type === "dir") ? 0 : 1;
+    const at = (a.type === 'directory' || a.type === 'dir') ? 0 : 1;
+    const bt = (b.type === 'directory' || b.type === 'dir') ? 0 : 1;
     if (at !== bt) return at - bt;
-    return (a.name || "").localeCompare(b.name || "");
+    return (a.name || '').localeCompare(b.name || '');
   });
 }
-
-function pad(str: string, len: number): string {
-  return str + " ".repeat(Math.max(0, len - str.length));
-}
+function pad(str: string, len: number): string { return str + ' '.repeat(Math.max(0, len - str.length)); }

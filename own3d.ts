@@ -11,9 +11,9 @@ import { extDeploy } from './src/commands/extDeploy.ts'
 import { extInit } from "./src/commands/extInit.ts";
 import { ExtDeployHelp } from './src/utils.ts'
 import axios from 'npm:axios'
-import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync } from './src/commands/codespace.ts'
+import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync, csUse } from './src/commands/codespace.ts'
 
-const version: string = '0.1.0-rc.7'
+const version: string = '0.1.0-rc.8'
 
 // set user agent for axios
 axios.defaults.headers['User-Agent'] = `own3d-cli/${version}`
@@ -27,6 +27,7 @@ SUBCOMMANDS:
     fn:create       Create a new edge function project
     fn:deploy       Deploy an edge function to the cloud
     cs:create       Create a new codespace from a git repository
+    cs:use          Set or change the default codespace (own3d cs:use <id>)
     cs:tree         Show full file tree of a codespace
     cs:ls           List directory contents inside a codespace (--path=/src)
     cs:read         Read a file from a codespace (--path=/src/index.ts)
@@ -88,6 +89,8 @@ switch (subcommand) {
         Deno.exit(await csReset(args))
     case 'cs:sync':
         Deno.exit(await csSync(args))
+    case 'cs:use':
+        Deno.exit(await csUse(args))
     default:
         if (args.version) {
             console.log(version)
