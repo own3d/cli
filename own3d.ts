@@ -13,17 +13,7 @@ import { ExtDeployHelp } from './src/utils.ts'
 import axios from 'npm:axios'
 import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync, csUse, csInfo } from './src/commands/codespace.ts'
 
-// Dynamically resolve version from deno.json (fallback to 0.0.0 if not found)
-function resolveVersion(): string {
-    try {
-        const url = new URL('./deno.json', import.meta.url);
-        const json = JSON.parse(Deno.readTextFileSync(url));
-        return json.version || '0.0.0';
-    } catch (_e) {
-        return '0.0.0';
-    }
-}
-const version: string = resolveVersion();
+const version: '0.1.0-rc.8';
 
 // set user agent for axios
 axios.defaults.headers['User-Agent'] = `own3d-cli/${version}`
