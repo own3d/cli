@@ -3,6 +3,7 @@ import type { Args } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import { join } from "../helpers/deps.ts";
 import axios from "npm:axios";
 import {stringify} from "https://deno.land/std@0.224.0/yaml/stringify.ts";
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen, underline } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 async function createManifestFile(manifestFile: string, extension: any, version: any) {
     const manifest: Partial<ExtensionManifest> = {
@@ -109,17 +110,15 @@ Let's get started! 🎉
         extensionId = extensionId ?? prompt("Please enter your Extension ID (UUID):");
         extensionVersion = extensionVersion ?? prompt("Please enter your Version ID (UUID):");
     } catch (error) {
-        console.error("Invalid extension id or version id");
+        console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid extension id or version id"));
         return 1
     }
 
-    console.log(`
-🔍 Summary:
---------------------------
-📦 Extension ID: ${extensionId}
-📌 Version ID: ${extensionVersion}
-
-Generating manifest.yaml... 🛠️`)
+    console.log(cyan(`\n🔎 Summary:`));
+    console.log(cyan('--------------------------'));
+    console.log(magenta(`📦 Extension ID: ${extensionId}`));
+    console.log(magenta(`📌 Version ID: ${extensionVersion}`));
+    console.log(cyan(`\nGenerating manifest.yaml... 🛠️`))
 
     try {
         const { data: extension } = await axios.get(
@@ -131,7 +130,7 @@ Generating manifest.yaml... 🛠️`)
 
         await createManifestFile(manifestFile, extension, version);
     } catch (error) {
-        console.error("Invalid extension id or version");
+        console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid extension id or version"));
         return 1
     }
     return 0;

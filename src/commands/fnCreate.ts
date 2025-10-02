@@ -1,4 +1,5 @@
 import type { Args } from 'https://deno.land/std@0.207.0/cli/parse_args.ts'
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 function fileExists(name: string) {
     try {
@@ -29,16 +30,16 @@ export function fnCreate(args: Args): Proise<number> {
     const name = args._[0]
 
     if (typeof name !== 'string' || name.length === 0) {
-        console.error('Please provide a name for the function')
+        console.error(bgRed(bold(' ERROR ')) + ' ' + red('Please provide a name for the function'))
         return 1
     }
 
     if (fileExists(name)) {
-        console.error('A directory with the same name already exists')
+        console.error(bgRed(bold(' ERROR ')) + ' ' + red('A directory with the same name already exists'))
         return 1
     }
 
-    console.log(`Creating new function: ${name}`)
+    console.log(cyan(`➜ Creating new function: ${name}`))
     Deno.mkdirSync(name)
     // Deno.writeTextFileSync(`${name}/.gitignore`, 'dist\n')
     Deno.mkdirSync(`${name}/.own3d`)
@@ -60,7 +61,7 @@ function greet(person: Person) {
 }
 
 console.log(greet({ name: "Alice", age: 36 }));`)
-    console.log('Done!')
+    console.log(green('✔ Done!'))
 
     return 0
 }

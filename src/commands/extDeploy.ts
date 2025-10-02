@@ -7,6 +7,7 @@ import { exists } from "https://deno.land/std@0.220.1/fs/exists.ts";
 import { HumanSize } from "../utils.ts";
 import { getFilteredFiles } from "../helpers/compress.ts";
 import { JSZip } from "https://deno.land/x/jszip@0.11.0/mod.ts";
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen, bgYellow, underline } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 export async function extDeploy(args: Args): Promise<number> {
   const archiveName: string = join(Deno.cwd(), "extension.zip");
@@ -17,7 +18,7 @@ export async function extDeploy(args: Args): Promise<number> {
     args["manifest"] ?? "manifest.yaml",
   );
   if (!Deno.statSync(manifestFile).isFile) {
-    console.error("Invalid extension, missing manifest");
+    console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid extension, missing manifest"));
     return 1;
   }
 
@@ -26,21 +27,21 @@ export async function extDeploy(args: Args): Promise<number> {
   ) as ExtensionManifest;
 
   if (!manifest) {
-    console.error("Invalid extension, invalid manifest");
+    console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid extension, invalid manifest"));
     return 1;
   }
 
   if (!manifest.name || !manifest.version) {
-    console.error("Invalid manifest, missing required fields");
+    console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid manifest, missing required fields"));
     return 1;
   }
 
   if (!manifestOnly) {
-    console.log(`- Compressing extension...`);
+    console.log(cyan("➜ Compressing extension..."));
 
     const distFolder: string = join(Deno.cwd(), args["dist"] ?? "dist");
     if (!Deno.statSync(distFolder).isDirectory) {
-      console.error("Invalid extension, missing dist folder");
+      console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid extension, missing dist folder"));
       return 1;
     }
 
@@ -58,46 +59,47 @@ export async function extDeploy(args: Args): Promise<number> {
 
     await zip.writeZip(archiveName);
 
-    console.log("✔ Extension compressed");
+    console.log(green("✔ Extension compressed"));
   }
 
   if (manifestOnly) {
-    console.log("- Deploying extension (manifest only)...");
+    console.log(magenta("ℹ️  Deploying extension (manifest only)..."));
   } else {
     const extensionSize = HumanSize(Deno.statSync(archiveName).size);
-    console.log(`- Deploying extension (script size: ${extensionSize})...`);
+    console.log(magenta(`ℹ️  Deploying extension (script size: ${extensionSize})...`));
   }
   try {
     const { data } = await deployExtension(manifest, archiveName, args);
 
-    console.log("✔ Extension is updated!");
+    console.log(bgGreen(bold(" SUCCESS ")) + " " + green("Extension is updated!"));
 
-    console.log("Visit your extension at:");
+    console.log(bold("\nVisit your extension at:"));
     console.log(
-      `https://console.dev.own3d.tv/console/extension-versions/${data.version.id}/edit`,
+      cyan(underline(`https://console.dev.own3d.tv/console/extension-versions/${data.version.id}/edit`)),
     );
     // deno-lint-ignore no-explicit-any
   } catch (e: any) {
     // x emoji
-    console.error("✘ Failed to deploy extension");
+    console.error(bgRed(bold(" FAIL ")) + " " + red("Failed to deploy extension"));
     if (e.response?.status === 422) {
       // Laravel validation exception (HTTP 422)
       const errors = e.response?.data?.errors;
       if (errors && typeof errors === 'object') {
+        console.error(yellow(bold("\nValidation errors:")));
         for (const [field, messages] of Object.entries(errors)) {
           if (Array.isArray(messages)) {
-            messages.forEach(msg => console.error(`Validation error [${field}]: ${msg}`));
+            messages.forEach(msg => console.error(yellow(`  • [${field}] `) + red(msg)));
           } else {
-            console.error(`Validation error [${field}]: ${messages}`);
+            console.error(yellow(`  • [${field}] `) + red(messages));
           }
         }
       } else {
-        console.error("Validation failed, but no error details provided.");
+        console.error(red("Validation failed, but no error details provided."));
       }
     } else if (e.response?.data?.message) {
-      console.error(e.response?.data.message);
+      console.error(red(e.response?.data.message));
     } else {
-      console.error(e.message);
+      console.error(red(e.message));
     }
     return 1;
   } finally {
@@ -106,6 +108,7 @@ export async function extDeploy(args: Args): Promise<number> {
     }
   }
 
+  console.log(green(bold("\nAll done! 🚀")));
   return 0;
 }
 

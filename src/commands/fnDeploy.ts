@@ -4,6 +4,7 @@ import { getHeaders } from "../helpers/getHeaders.ts";
 import { getFilteredFiles } from "../helpers/compress.ts";
 import { join } from "../helpers/deps.ts";
 import { JSZip } from "https://deno.land/x/jszip@0.11.0/mod.ts";
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 export async function fnDeploy(_args: Args): Promise<number> {
     const directoryName: string = _args._[0] as string;
@@ -14,26 +15,26 @@ export async function fnDeploy(_args: Args): Promise<number> {
     const manifestFile: string = join(projectDirectory, ".own3d", "manifest.json");
     try {
         if (!Deno.statSync(manifestFile).isFile) {
-            console.error("Invalid function, missing manifest");
+            console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid function, missing manifest"));
             return 1;
         }
     } catch (_e) {
-        console.error("Invalid function, missing manifest");
+        console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid function, missing manifest"));
         return 1
     }
     const manifest = JSON.parse(Deno.readTextFileSync(manifestFile));
 
     if (!manifest) {
-        console.error("Invalid function, missing manifest");
+        console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid function, missing manifest"));
         return 1;
     }
 
     if (!manifest.name || !manifest.version || !manifest.entrypoint) {
-        console.error("Invalid manifest, missing required fields");
+        console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid manifest, missing required fields"));
         return 1;
     }
 
-    console.log(`- Compressing ${manifest.name} function...`);
+    console.log(cyan(`➜ Compressing ${manifest.name} function...`));
 
     // Get filtered files (excluding those matching .gitignore patterns)
     const filesToCompress = await getFilteredFiles(projectDirectory, [
@@ -49,8 +50,8 @@ export async function fnDeploy(_args: Args): Promise<number> {
 
     await zip.writeZip(archiveName);
 
-    console.log("✔ Function compressed");
-    console.log(`- Deploying ${manifest.name} function...`);
+    console.log(green("✔ Function compressed"));
+    console.log(magenta(`ℹ️  Deploying ${manifest.name} function...`));
 
     try {
         const file = await Deno.readFile(archiveName);
@@ -70,17 +71,17 @@ export async function fnDeploy(_args: Args): Promise<number> {
             },
         );
 
-        console.log("✔ Deployment is live!");
+        console.log(bgGreen(bold(" SUCCESS ")) + " " + green("Deployment is live!"));
 
         response.data.domains.forEach((domain: string) => {
-            console.log(`Website URL: ${domain}`);
+            console.log(cyan(`Website URL: ${domain}`));
         });
     } catch (e) {
-        console.error("Failed to deploy function");
+        console.error(bgRed(bold(" FAIL ")) + " " + red("Failed to deploy function"));
         if (e.response?.data?.message) {
-            console.error(e.response.data.message);
+            console.error(red(e.response.data.message));
         } else {
-            console.error(e.message);
+            console.error(red(e.message));
         }
         return 1;
     } finally {

@@ -4,22 +4,23 @@ import { stringify } from 'https://cdn.skypack.dev/querystring'
 import { open } from 'https://deno.land/x/open@v0.0.6/index.ts'
 import axios from 'npm:axios'
 import { useStorage } from "../composables/useStorage.ts";
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "https://deno.land/std@0.224.0/fmt/colors.ts";
 
 const {putJson} = useStorage()
 
 async function fetchUser(queryParams: Record<string, string>) {
     try {
-        console.log('Fetching user information...')
+        console.log(cyan('➜ Fetching user information...'));
         const user = await axios.get('https://id.stream.tv/api/users/@me', {
             headers: {
                 Authorization: `Bearer ${queryParams.access_token}`,
             },
         })
-        console.log(`Logged in as ${user.data.name}`)
+        console.log(green(`✔ Logged in as ${user.data.name}`));
         queryParams.user = user.data
     // deno-lint-ignore no-explicit-any
     } catch (error: any) {
-        console.error(error.message)
+        console.error(bgRed(bold(' FAIL ')) + ' ' + red(error.message))
     }
 }
 
@@ -33,7 +34,7 @@ export function login(_args: Args): Promise<number> {
         state,
     })}`
 
-    console.log('Please follow the instructions in the browser...')
+    console.log(magenta('ℹ️  Please follow the instructions in the browser...'))
 
     if (_args['console-only']) {
         console.log(authorizeUrl)
@@ -54,7 +55,7 @@ export function login(_args: Args): Promise<number> {
                 queryParams.expires_at = new Date(Date.now() + queryParams.expires_in * 1000)
                 await fetchUser(queryParams)
                 await putJson('credentials.json', queryParams)
-                console.log('Login successful, exiting...')
+                console.log(bgGreen(bold(' SUCCESS ')) + ' ' + green('Login successful, exiting...'))
                 setTimeout(() => resolve(0), 1000)
                 return new Response(JSON.stringify(queryParams))
             }
