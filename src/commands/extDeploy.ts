@@ -7,7 +7,7 @@ import { exists } from "https://deno.land/std@0.220.1/fs/exists.ts";
 import { HumanSize } from "../utils.ts";
 import { getFilteredFiles } from "../helpers/compress.ts";
 import { JSZip } from "https://deno.land/x/jszip@0.11.0/mod.ts";
-import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen, bgYellow, underline } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen, bgYellow, underline } from "../helpers/colors.ts";
 
 export async function extDeploy(args: Args): Promise<number> {
   const archiveName: string = join(Deno.cwd(), "extension.zip");

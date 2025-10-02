@@ -4,9 +4,10 @@ import { getHeaders } from "../helpers/getHeaders.ts";
 import { getFilteredFiles } from "../helpers/compress.ts";
 import { join } from "../helpers/deps.ts";
 import { JSZip } from "https://deno.land/x/jszip@0.11.0/mod.ts";
-import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "../helpers/colors.ts";
 
 export async function fnDeploy(_args: Args): Promise<number> {
+    const quiet = !!(_args.quiet || _args.q);
     const directoryName: string = _args._[0] as string;
     const archiveName: string = join(Deno.cwd(), "archive.zip");
     const projectDirectory: string = join(Deno.cwd(), directoryName ?? ".");
@@ -34,7 +35,7 @@ export async function fnDeploy(_args: Args): Promise<number> {
         return 1;
     }
 
-    console.log(cyan(`➜ Compressing ${manifest.name} function...`));
+    if (!quiet) console.log(cyan(`➜ Compressing ${manifest.name} function...`));
 
     // Get filtered files (excluding those matching .gitignore patterns)
     const filesToCompress = await getFilteredFiles(projectDirectory, [
@@ -50,8 +51,8 @@ export async function fnDeploy(_args: Args): Promise<number> {
 
     await zip.writeZip(archiveName);
 
-    console.log(green("✔ Function compressed"));
-    console.log(magenta(`ℹ️  Deploying ${manifest.name} function...`));
+    if (!quiet) console.log(green("✔ Function compressed"));
+    if (!quiet) console.log(magenta(`ℹ️  Deploying ${manifest.name} function...`));
 
     try {
         const file = await Deno.readFile(archiveName);
@@ -71,10 +72,10 @@ export async function fnDeploy(_args: Args): Promise<number> {
             },
         );
 
-        console.log(bgGreen(bold(" SUCCESS ")) + " " + green("Deployment is live!"));
+        if (!quiet) console.log(bgGreen(bold(" SUCCESS ")) + " " + green("Deployment is live!"));
 
         response.data.domains.forEach((domain: string) => {
-            console.log(cyan(`Website URL: ${domain}`));
+            if (!quiet) console.log(cyan(`Website URL: ${domain}`));
         });
     } catch (e) {
         console.error(bgRed(bold(" FAIL ")) + " " + red("Failed to deploy function"));

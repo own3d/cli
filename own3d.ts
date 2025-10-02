@@ -14,26 +14,38 @@ import { extDeploy } from "./src/commands/extDeploy.ts";
 import { extInit } from "./src/commands/extInit.ts";
 import { ExtDeployHelp } from "./src/utils.ts";
 import axios from "npm:axios";
-import {
-  csCreate,
-  csInfo,
-  csLs,
-  csRead,
-  csReset,
-  csRm,
-  csSync,
-  csTree,
-  csUse,
-  csWrite,
-} from "./src/commands/codespace.ts";
+import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync, csUse, csInfo } from './src/commands/codespace.ts'
+import { configSet, configShow, loadCliConfig, saveCliConfig, type CliConfig } from './src/commands/config.ts'
+import { setColorDisabled } from './src/helpers/colors.ts'
+import { setLoggerQuiet } from './src/helpers/logger.ts'
+
+const args: Args = parseArgs(Deno.args);
 
 const version: string = "0.1.0-rc.9";
 
 // set user agent for axios
 axios.defaults.headers["User-Agent"] = `own3d-cli/${version}`;
 
+const config: CliConfig = loadCliConfig();
+
+// Honor config noColor unless overridden by explicit flag
+// We need raw args before parse? We already parsed; if user passed --no-color it appears in args
+if (config.noColor || args['no-color']) {
+    setColorDisabled(true);
+}
+
+// Apply quiet default if configured
+if (config.quiet && !args.quiet && !args.q) {
+    (args as any).quiet = true;
+}
+setLoggerQuiet(!!(args.quiet || args.q));
+
 const help: string = `own3d ${version}
 Command line tool for OWN3D Apps.
+
+GLOBAL FLAGS:
+    --no-color       Disable ANSI colors (persist via: own3d config:set noColor true)
+    -q, --quiet      Reduce non-essential output (persist via: own3d config:set quiet true)
 
 SUBCOMMANDS:
     ext:deploy       Deploy an extension to the cloud
@@ -50,6 +62,8 @@ SUBCOMMANDS:
     cs:rm <path>     Delete a file
     cs:reset         Reset codespace filesystem to repository state
     cs:sync          Sync codespace filesystem to CDN
+    config:set       Set a CLI preference (quiet|noColor)
+    config:show      Show current CLI preferences
     self-update      Update the CLI to the latest version
     login            Log in to OWN3D
 
@@ -58,7 +72,6 @@ Global codespace resolution order for cs:* (except cs:use): --id > ENV OWN3D_COD
 For more information, read the documentation at https://dev.own3d.tv/docs/cli/
 `;
 
-const args: Args = parseArgs(Deno.args);
 const subcommand = args._.shift();
 
 if (args["help"] || args["h"]) {
@@ -110,6 +123,10 @@ switch (subcommand) {
     Deno.exit(await csUse(args));
   case "cs:info":
     Deno.exit(await csInfo(args));
+  case 'config:set':
+        Deno.exit(await configSet(args))
+    case 'config:show':
+        Deno.exit(await configShow(args))
   default:
     if (args.version) {
       console.log(version);

@@ -4,19 +4,19 @@ import { stringify } from 'https://cdn.skypack.dev/querystring'
 import { open } from 'https://deno.land/x/open@v0.0.6/index.ts'
 import axios from 'npm:axios'
 import { useStorage } from "../composables/useStorage.ts";
-import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen } from "../helpers/colors.ts";
 
 const {putJson} = useStorage()
 
-async function fetchUser(queryParams: Record<string, string>) {
+async function fetchUser(queryParams: Record<string, string>, quiet: boolean) {
     try {
-        console.log(cyan('➜ Fetching user information...'));
+        if (!quiet) console.log(cyan('➜ Fetching user information...'));
         const user = await axios.get('https://id.stream.tv/api/users/@me', {
             headers: {
                 Authorization: `Bearer ${queryParams.access_token}`,
             },
         })
-        console.log(green(`✔ Logged in as ${user.data.name}`));
+        if (!quiet) console.log(green(`✔ Logged in as ${user.data.name}`));
         queryParams.user = user.data
     // deno-lint-ignore no-explicit-any
     } catch (error: any) {
@@ -25,6 +25,7 @@ async function fetchUser(queryParams: Record<string, string>) {
 }
 
 export function login(_args: Args): Promise<number> {
+    const quiet = !!(_args.quiet || _args.q);
     const state = uuid.v1.generate()
     const authorizeUrl = `https://id.stream.tv/oauth/authorize?${stringify({
         client_id: '9853a006-86a1-4f02-bfa2-d58daa3581a8',
@@ -34,7 +35,7 @@ export function login(_args: Args): Promise<number> {
         state,
     })}`
 
-    console.log(magenta('ℹ️  Please follow the instructions in the browser...'))
+    if (!quiet) console.log(magenta('ℹ️  Please follow the instructions in the browser...'))
 
     if (_args['console-only']) {
         console.log(authorizeUrl)
@@ -53,9 +54,9 @@ export function login(_args: Args): Promise<number> {
                     return new Response('Invalid state.')
                 }
                 queryParams.expires_at = new Date(Date.now() + queryParams.expires_in * 1000)
-                await fetchUser(queryParams)
+                await fetchUser(queryParams, quiet)
                 await putJson('credentials.json', queryParams)
-                console.log(bgGreen(bold(' SUCCESS ')) + ' ' + green('Login successful, exiting...'))
+                if (!quiet) console.log(bgGreen(bold(' SUCCESS ')) + ' ' + green('Login successful, exiting...'))
                 setTimeout(() => resolve(0), 1000)
                 return new Response(JSON.stringify(queryParams))
             }

@@ -1,16 +1,7 @@
 import type { Args } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import axios from "npm:axios";
 import { getHeaders } from "../helpers/getHeaders.ts";
-import {
-  bgGreen,
-  bgRed,
-  bold,
-  cyan,
-  green,
-  magenta,
-  red,
-  yellow,
-} from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { bold, cyan, green, magenta, red, yellow, bgRed, bgGreen } from "../helpers/colors.ts";
 import { useStorage } from "../composables/useStorage.ts";
 
 const BASE_URL = "https://ext.own3d.pro/v1";
@@ -101,15 +92,16 @@ export async function csUse(args: Args): Promise<number> {
 // Async wrapper for commands needing id (refactor usages below)
 async function resolveId(args: Args): Promise<string> {
   const flagId = typeof args.id === 'string' ? args.id : undefined;
+  const quiet = !!(args.quiet || args.q);
   if (flagId) return flagId;
   const envId = Deno.env.get('OWN3D_CODESPACE_ID');
   if (envId) {
-    console.log(cyan(`Using codespace from ENV OWN3D_CODESPACE_ID=${envId}`));
+    if (!quiet) console.log(cyan(`Using codespace from ENV OWN3D_CODESPACE_ID=${envId}`));
     return envId;
   }
   const stored = await getDefaultCodespaceId();
   if (stored) {
-    console.log(cyan(`Using default codespace: ${stored} (override with --id or env OWN3D_CODESPACE_ID)`));
+    if (!quiet) console.log(cyan(`Using default codespace: ${stored} (override with --id or env OWN3D_CODESPACE_ID)`));
     return stored;
   }
   console.error(logErrorPrefix() + red("No codespace id set. Provide --id, set OWN3D_CODESPACE_ID, or run 'own3d cs:use <id>'."));

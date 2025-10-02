@@ -3,9 +3,10 @@ import type { Args } from "https://deno.land/std@0.207.0/cli/parse_args.ts";
 import { join } from "../helpers/deps.ts";
 import axios from "npm:axios";
 import {stringify} from "https://deno.land/std@0.224.0/yaml/stringify.ts";
-import { bold, green, red, yellow, cyan, magenta, bgRed, bgGreen, underline } from "https://deno.land/std@0.224.0/fmt/colors.ts";
+import { bold, cyan, magenta, red, yellow, green } from "../helpers/colors.ts";
+import { step, info, success, error as logError } from "../helpers/logger.ts";
 
-async function createManifestFile(manifestFile: string, extension: any, version: any) {
+async function createManifestFile(manifestFile: string, extension: any, version: any, quiet: boolean) {
     const manifest: Partial<ExtensionManifest> = {
         schema_version: 1,
         id: extension.id,
@@ -72,17 +73,11 @@ async function createManifestFile(manifestFile: string, extension: any, version:
     // write manifest file
     await Deno.writeTextFile(manifestFile, stringify(manifest));
 
-    console.log(`Success! \`manifest.yaml\` has been created 🎉
-
-You can now proceed with developing your OWN3D extension.
-Next Steps:
-- Edit \`manifest.yaml\` to double-check the configuration.
-- Deploy with \`own3d ext:deploy\`.
-
-Happy coding! 🚀`);
+    if (!quiet) success("`manifest.yaml` has been created 🎉\n\nYou can now proceed with developing your OWN3D extension.\nNext Steps:\n- Edit `manifest.yaml` to double-check the configuration.\n- Deploy with `own3d ext:deploy`.\n\nHappy coding! 🚀");
 }
 
 export async function extInit(args: Args): Promise<number> {
+    const quiet = !!(args.quiet || args.q);
     // check if folder is already initialized
     const manifestFile: string = join(
         Deno.cwd(),
@@ -90,35 +85,25 @@ export async function extInit(args: Args): Promise<number> {
     );
 
     // create manifest file by pulling data from own3d
-    console.log(`🚀 Welcome to OWN3D Extension Setup!
--------------------------------------
-This command will generate a \`manifest.yaml\` file for your extension.
-
-Before we begin, make sure you have created an extension at:
-➡️ https://console.dev.own3d.tv/console/extensions/create
-
-You'll need:
-✅ Extension ID (UUID)
-✅ Version ID (UUID)
-
-Let's get started! 🎉
-`);
+    if (!quiet) info(`🚀 Welcome to OWN3D Extension Setup!\n-------------------------------------\nThis command will generate a \`manifest.yaml\` file for your extension.\n\nBefore we begin, make sure you have created an extension at:\n➡️ https://console.dev.own3d.tv/console/extensions/create\n\nYou'll need:\n✅ Extension ID (UUID)\n✅ Version ID (UUID)\n\nLet's get started! 🎉\n`);
     let extensionId = args["id"];
     let extensionVersion = args["version"];
 
     try {
         extensionId = extensionId ?? prompt("Please enter your Extension ID (UUID):");
         extensionVersion = extensionVersion ?? prompt("Please enter your Version ID (UUID):");
-    } catch (error) {
-        console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid extension id or version id"));
-        return 1
+    } catch (_error) {
+        logError("Invalid extension id or version id");
+        return 1;
     }
 
-    console.log(cyan(`\n🔎 Summary:`));
-    console.log(cyan('--------------------------'));
-    console.log(magenta(`📦 Extension ID: ${extensionId}`));
-    console.log(magenta(`📌 Version ID: ${extensionVersion}`));
-    console.log(cyan(`\nGenerating manifest.yaml... 🛠️`))
+    if (!quiet) {
+        info(`\n🔎 Summary:`);
+        info('--------------------------');
+        info(`📦 Extension ID: ${extensionId}`);
+        info(`📌 Version ID: ${extensionVersion}`);
+        step(`Generating manifest.yaml... 🛠️`);
+    }
 
     try {
         const { data: extension } = await axios.get(
@@ -128,10 +113,10 @@ Let's get started! 🎉
             `https://console.dev.own3d.tv/api/v1/extensions/${extensionId}/versions/${extensionVersion}`,
         );
 
-        await createManifestFile(manifestFile, extension, version);
-    } catch (error) {
-        console.error(bgRed(bold(" ERROR ")) + " " + red("Invalid extension id or version"));
-        return 1
+        await createManifestFile(manifestFile, extension, version, quiet);
+    } catch (_error) {
+        logError("Invalid extension id or version");
+        return 1;
     }
     return 0;
 }
