@@ -27,7 +27,7 @@ import {
   csWrite,
 } from "./src/commands/codespace.ts";
 
-const version: string = "0.1.0-rc.8";
+const version: string = "0.1.0-rc.9";
 
 // set user agent for axios
 axios.defaults.headers["User-Agent"] = `own3d-cli/${version}`;
