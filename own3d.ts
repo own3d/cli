@@ -21,7 +21,7 @@ import { setLoggerQuiet } from './src/helpers/logger.ts'
 
 const args: Args = parseArgs(Deno.args);
 
-const version: string = "0.1.0-rc.9";
+const version: string = "0.1.0-rc.10";
 
 // set user agent for axios
 axios.defaults.headers["User-Agent"] = `own3d-cli/${version}`;
