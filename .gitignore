@@ -6,9 +6,11 @@ credentials.json
 
 # functions
 test
+dist
 
 # extensions
 assets
 extension-dist
 archive.zip
 manifest.yaml
+forms.yaml

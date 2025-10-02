@@ -74,18 +74,31 @@ export async function extDeploy(args: Args): Promise<number> {
 
     console.log("Visit your extension at:");
     console.log(
-      `https://console.dev.own3d.tv/resources/extension-versions/${data.version.id}`,
+      `https://console.dev.own3d.tv/console/extension-versions/${data.version.id}/edit`,
     );
     // deno-lint-ignore no-explicit-any
   } catch (e: any) {
     // x emoji
     console.error("✘ Failed to deploy extension");
-    if (e.response?.data?.message) {
+    if (e.response?.status === 422) {
+      // Laravel validation exception (HTTP 422)
+      const errors = e.response?.data?.errors;
+      if (errors && typeof errors === 'object') {
+        for (const [field, messages] of Object.entries(errors)) {
+          if (Array.isArray(messages)) {
+            messages.forEach(msg => console.error(`Validation error [${field}]: ${msg}`));
+          } else {
+            console.error(`Validation error [${field}]: ${messages}`);
+          }
+        }
+      } else {
+        console.error("Validation failed, but no error details provided.");
+      }
+    } else if (e.response?.data?.message) {
       console.error(e.response?.data.message);
     } else {
       console.error(e.message);
     }
-
     return 1;
   } finally {
     if (await exists(archiveName)) {
@@ -141,6 +154,19 @@ async function deployExtension(
     }),
     "manifest.yaml",
   );
+
+  // Add forms.yaml if it exists
+  const formsFile = join(Deno.cwd(), args["forms"] ?? "forms.yaml");
+  if (await exists(formsFile)) {
+    const formsContent = Deno.readFileSync(formsFile);
+    data.append(
+      "forms",
+      new Blob([formsContent], {
+        type: "application/yaml",
+      }),
+      "forms.yaml",
+    );
+  }
 
   if (args["assets"]) {
     // append all files to the form data
