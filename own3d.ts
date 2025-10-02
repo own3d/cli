@@ -11,8 +11,9 @@ import { extDeploy } from './src/commands/extDeploy.ts'
 import { extInit } from "./src/commands/extInit.ts";
 import { ExtDeployHelp } from './src/utils.ts'
 import axios from 'npm:axios'
+import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync } from './src/commands/codespace.ts'
 
-const version: string = '0.1.0-rc.6'
+const version: string = '0.1.0-rc.7'
 
 // set user agent for axios
 axios.defaults.headers['User-Agent'] = `own3d-cli/${version}`
@@ -21,12 +22,20 @@ const help: string = `own3d ${version}
 Command line tool for OWN3D Apps.
 
 SUBCOMMANDS:
-    ext:deploy   Deploy an extension to the cloud
-    ext:init     Initialize a new extension project
-    fn:create    Create a new edge function project
-    fn:deploy    Deploy a edge function to the cloud
-    self-update  Update the CLI to the latest version
-    login        Log in to OWN3D
+    ext:deploy      Deploy an extension to the cloud
+    ext:init        Initialize a new extension project
+    fn:create       Create a new edge function project
+    fn:deploy       Deploy an edge function to the cloud
+    cs:create       Create a new codespace from a git repository
+    cs:tree         Show full file tree of a codespace
+    cs:ls           List directory contents inside a codespace (--path=/src)
+    cs:read         Read a file from a codespace (--path=/src/index.ts)
+    cs:write        Write/overwrite a file in a codespace (--path=/src/app.ts --file=local.ts)
+    cs:rm           Delete a file in a codespace (--path=/src/app.ts)
+    cs:reset        Reset codespace filesystem to repository state
+    cs:sync         Sync codespace filesystem to CDN
+    self-update     Update the CLI to the latest version
+    login           Log in to OWN3D
 
 For more information, read the documentation at https://dev.own3d.tv/docs/cli/
 `
@@ -63,6 +72,22 @@ switch (subcommand) {
         Deno.exit(await selfUpdate(args))
     case 'login':
         Deno.exit(await login(args))
+    case 'cs:create':
+        Deno.exit(await csCreate(args))
+    case 'cs:tree':
+        Deno.exit(await csTree(args))
+    case 'cs:ls':
+        Deno.exit(await csLs(args))
+    case 'cs:read':
+        Deno.exit(await csRead(args))
+    case 'cs:write':
+        Deno.exit(await csWrite(args))
+    case 'cs:rm':
+        Deno.exit(await csRm(args))
+    case 'cs:reset':
+        Deno.exit(await csReset(args))
+    case 'cs:sync':
+        Deno.exit(await csSync(args))
     default:
         if (args.version) {
             console.log(version)
