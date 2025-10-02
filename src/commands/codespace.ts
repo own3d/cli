@@ -63,48 +63,27 @@ function printAxiosError(e: any) { // deno-lint-ignore no-explicit-any
 
 function requireArg(args: Args, key: string, message?: string): string | never {
   const val = args[key];
-  if (typeof val !== "string" || !val.length) {
+  if (val === undefined || val === null) {
     console.error(
       logErrorPrefix() + red(message ?? `Missing required --${key}`),
     );
     Deno.exit(1);
   }
-  return val;
-}
-
-// cs:create --name --repo --user-id --password
-export async function csCreate(args: Args): Promise<number> {
-  const name = requireArg(args, "name");
-  const repository_url = args.repo || args.repository || args["repository-url"];
-  if (!repository_url || typeof repository_url !== "string") {
-    console.error(
-      logErrorPrefix() + red("Missing required --repo (repository url)"),
-    );
-    return 1;
-  }
-  const user_id = requireArg(args, "user-id", "Missing required --user-id");
-  const password = requireArg(args, "password");
-
-  console.log(cyan("➜ Creating codespace..."));
-  try {
-    const { data } = await axios.post(`${BASE_URL}/codespaces`, {
-      name,
-      repository_url,
-      user_id,
-      password,
-    }, { headers: await getHeaders() });
-
-    console.log(logSuccessPrefix() + green("Codespace created"));
-    console.log(magenta(`ID: ${data.id}`));
-    if (!args["no-default"]) {
-      await setDefaultCodespaceId(data.id);
-      console.log(cyan(`Set as default codespace (use 'own3d cs:use <id>' to change).`));
+  if (typeof val === 'string') {
+    if (val.trim().length === 0) {
+      console.error(
+        logErrorPrefix() + red(message ?? `Missing required --${key}`),
+      );
+      Deno.exit(1);
     }
-    return 0;
-  } catch (e) {
-    printAxiosError(e);
-    return 1;
+    return val;
   }
+  // allow number / boolean coercion (primarily numbers like --user-id 1)
+  if (typeof val === 'number' || typeof val === 'boolean') {
+    return String(val);
+  }
+  console.error(logErrorPrefix() + red(message ?? `Invalid value for --${key}`));
+  Deno.exit(1);
 }
 
 // New command: cs:use <id>
@@ -119,19 +98,9 @@ export async function csUse(args: Args): Promise<number> {
   return 0;
 }
 
-function ensureId(args: Args): string {
-  const provided = (args._[0] && typeof args._[0] === 'string') ? args._[0] as string : (typeof args.id === 'string' ? args.id : undefined);
-  if (provided) return provided;
-  // fallback to stored default
-  // NOTE: ensureId cannot be async easily, so throw marker and handle outside OR convert callers to async; easier: promote ensureId to async.
-  throw new Error('__NEED_ASYNC_ID__');
-}
-
 // Async wrapper for commands needing id (refactor usages below)
 async function resolveId(args: Args): Promise<string> {
-  const positional = (args._[0] && typeof args._[0] === 'string') ? args._[0] as string : undefined;
   const flagId = typeof args.id === 'string' ? args.id : undefined;
-  if (positional) return positional;
   if (flagId) return flagId;
   const envId = Deno.env.get('OWN3D_CODESPACE_ID');
   if (envId) {
@@ -140,11 +109,15 @@ async function resolveId(args: Args): Promise<string> {
   }
   const stored = await getDefaultCodespaceId();
   if (stored) {
-    console.log(cyan(`Using default codespace: ${stored} (override with explicit <id> / --id or env OWN3D_CODESPACE_ID)`));
+    console.log(cyan(`Using default codespace: ${stored} (override with --id or env OWN3D_CODESPACE_ID)`));
     return stored;
   }
-  console.error(logErrorPrefix() + red("No codespace id provided and no default set. Use 'own3d cs:use <id>' or pass an id."));
+  console.error(logErrorPrefix() + red("No codespace id set. Provide --id, set OWN3D_CODESPACE_ID, or run 'own3d cs:use <id>'."));
   Deno.exit(1);
+}
+
+export async function csCreate(args: Args): Promise<number> {
+    console.error(logErrorPrefix() + red("Not implemented yet"));
 }
 
 // cs:tree <id>
@@ -186,16 +159,17 @@ export async function csTree(args: Args): Promise<number> {
   }
 }
 
-// cs:ls <id> --path
+// cs:ls [path]
 export async function csLs(args: Args): Promise<number> {
+  // derive path from --path or first positional (if provided)
+  const pathArg = typeof args.path === 'string' ? args.path : (typeof args._[0] === 'string' ? args._[0] as string : '/');
   const id = await resolveId(args);
-  const path = args.path || "/";
   const wantJson = !!args.json;
   const longOutput = !!(args.long || args.l);
-  console.log(cyan(`➜ Listing directory: ${path}`));
+  console.log(cyan(`➜ Listing directory: ${pathArg}`));
   try {
     const { data } = await axios.get(`${BASE_URL}/codespaces/${id}/fs/ls`, {
-      params: { path },
+      params: { path: pathArg },
       headers: await getHeaders(),
     });
 
@@ -323,10 +297,14 @@ function dim(str: string): string {
   return `\x1b[2m${str}\x1b[22m`;
 }
 
-// cs:read <id> --path
+// cs:read [path]
 export async function csRead(args: Args): Promise<number> {
+  const path = typeof args.path === 'string' ? args.path : (typeof args._[0] === 'string' ? args._[0] as string : undefined);
+  if (!path) {
+    console.error(logErrorPrefix() + red('Missing file path. Usage: own3d cs:read <path> [--id=<codespace>]'));
+    return 1;
+  }
   const id = await resolveId(args);
-  const path = requireArg(args, "path");
   try {
     const { data } = await axios.get(`${BASE_URL}/codespaces/${id}/fs/file`, {
       params: { path },
@@ -340,27 +318,23 @@ export async function csRead(args: Args): Promise<number> {
   }
 }
 
-// cs:write <id> --path --file
+// cs:write [path] --file=local
 export async function csWrite(args: Args): Promise<number> {
+  const path = typeof args.path === 'string' ? args.path : (typeof args._[0] === 'string' ? args._[0] as string : undefined);
+  if (!path) {
+    console.error(logErrorPrefix() + red('Missing destination path. Usage: own3d cs:write <path> --file=localFile [--id=<codespace>]'));
+    return 1;
+  }
+  const filePath = requireArg(args, 'file', 'Missing required --file local file path');
   const id = await resolveId(args);
-  const path = requireArg(args, "path");
-  const filePath = requireArg(
-    args,
-    "file",
-    "Missing required --file local file path",
-  );
-
   console.log(cyan(`➜ Uploading file to: ${path}`));
   try {
     const content = await Deno.readFile(filePath);
     const form = new FormData();
-    form.append("path", path);
-    form.append("file", new Blob([content]), filePath.split(/[/\\]/).pop());
-
-    await axios.post(`${BASE_URL}/codespaces/${id}/fs/file`, form, {
-      headers: await getHeaders(),
-    });
-    console.log(logSuccessPrefix() + green("File written"));
+    form.append('path', path);
+    form.append('file', new Blob([content]), filePath.split(/[/\\]/).pop());
+    await axios.post(`${BASE_URL}/codespaces/${id}/fs/file`, form, { headers: await getHeaders() });
+    console.log(logSuccessPrefix() + green('File written'));
     return 0;
   } catch (e) {
     if (e instanceof Deno.errors.NotFound) {
@@ -372,15 +346,19 @@ export async function csWrite(args: Args): Promise<number> {
   }
 }
 
-// cs:rm <id> --path
+// cs:rm [path]
 export async function csRm(args: Args): Promise<number> {
+  const path = typeof args.path === 'string' ? args.path : (typeof args._[0] === 'string' ? args._[0] as string : undefined);
+  if (!path) {
+    console.error(logErrorPrefix() + red('Missing file path. Usage: own3d cs:rm <path> [--id=<codespace>]'));
+    return 1;
+  }
   const id = await resolveId(args);
-  const path = requireArg(args, 'path');
   console.log(cyan(`➜ Deleting: ${path}`));
   try {
     await axios.delete(`${BASE_URL}/codespaces/${id}/fs/rm`, {
-      headers: { ...(await getHeaders()), 'Content-Type': 'application/json' },
-      data: { path },
+      headers: await getHeaders(),
+      params: { path },
     });
     console.log(logSuccessPrefix() + green('Deleted'));
     return 0;
@@ -428,3 +406,32 @@ function sortEntries(entries: any[]): any[] { // deno-lint-ignore no-explicit-an
   });
 }
 function pad(str: string, len: number): string { return str + ' '.repeat(Math.max(0, len - str.length)); }
+
+// cs:info
+export async function csInfo(_args: Args): Promise<number> {
+  const flagId = typeof _args.id === 'string' ? _args.id : undefined;
+  const envId = Deno.env.get('OWN3D_CODESPACE_ID') || undefined;
+  const stored = await getDefaultCodespaceId();
+
+  let resolved: string | undefined;
+  let source: string | undefined;
+  if (flagId) { resolved = flagId; source = '--id flag'; }
+  else if (envId) { resolved = envId; source = 'environment (OWN3D_CODESPACE_ID)'; }
+  else if (stored) { resolved = stored; source = 'stored default (cs:use)'; }
+
+  if (_args.json) {
+    console.log(JSON.stringify({ id: resolved ?? null, source: source ?? null }, null, 2));
+    return resolved ? 0 : 1;
+  }
+
+  if (resolved) {
+    console.log(logSuccessPrefix() + green(`Active codespace: ${resolved}`));
+    console.log(cyan(`Source: ${source}`));
+    console.log(yellow(`Override order: --id > ENV OWN3D_CODESPACE_ID > stored default`));
+    return 0;
+  } else {
+    console.error(logErrorPrefix() + red('No active codespace resolved.'));
+    console.log(cyan('Set one with: own3d cs:use <id>  OR  pass --id=<id>  OR  export OWN3D_CODESPACE_ID=<id>'));
+    return 1;
+  }
+}

@@ -11,9 +11,19 @@ import { extDeploy } from './src/commands/extDeploy.ts'
 import { extInit } from "./src/commands/extInit.ts";
 import { ExtDeployHelp } from './src/utils.ts'
 import axios from 'npm:axios'
-import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync, csUse } from './src/commands/codespace.ts'
+import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync, csUse, csInfo } from './src/commands/codespace.ts'
 
-const version: string = '0.1.0-rc.8'
+// Dynamically resolve version from deno.json (fallback to 0.0.0 if not found)
+function resolveVersion(): string {
+    try {
+        const url = new URL('./deno.json', import.meta.url);
+        const json = JSON.parse(Deno.readTextFileSync(url));
+        return json.version || '0.0.0';
+    } catch (_e) {
+        return '0.0.0';
+    }
+}
+const version: string = resolveVersion();
 
 // set user agent for axios
 axios.defaults.headers['User-Agent'] = `own3d-cli/${version}`
@@ -22,21 +32,24 @@ const help: string = `own3d ${version}
 Command line tool for OWN3D Apps.
 
 SUBCOMMANDS:
-    ext:deploy      Deploy an extension to the cloud
-    ext:init        Initialize a new extension project
-    fn:create       Create a new edge function project
-    fn:deploy       Deploy an edge function to the cloud
-    cs:create       Create a new codespace from a git repository
-    cs:use          Set or change the default codespace (own3d cs:use <id>)
-    cs:tree         Show full file tree of a codespace
-    cs:ls           List directory contents inside a codespace (--path=/src)
-    cs:read         Read a file from a codespace (--path=/src/index.ts)
-    cs:write        Write/overwrite a file in a codespace (--path=/src/app.ts --file=local.ts)
-    cs:rm           Delete a file in a codespace (--path=/src/app.ts)
-    cs:reset        Reset codespace filesystem to repository state
-    cs:sync         Sync codespace filesystem to CDN
-    self-update     Update the CLI to the latest version
-    login           Log in to OWN3D
+    ext:deploy       Deploy an extension to the cloud
+    ext:init         Initialize a new extension project
+    fn:create        Create a new edge function project
+    fn:deploy        Deploy an edge function to the cloud
+    cs:create        Create a new codespace from a git repository
+    cs:use <id>      Set or change the default codespace
+    cs:info          Show currently resolved codespace id and its origin
+    cs:tree          Show full file tree of a codespace
+    cs:ls [path]     List directory contents (default '/')
+    cs:read <path>   Read a file from the codespace
+    cs:write <path>  Write/overwrite a file (requires --file=localPath)
+    cs:rm <path>     Delete a file
+    cs:reset         Reset codespace filesystem to repository state
+    cs:sync          Sync codespace filesystem to CDN
+    self-update      Update the CLI to the latest version
+    login            Log in to OWN3D
+
+Global codespace resolution order for cs:* (except cs:use): --id > ENV OWN3D_CODESPACE_ID > stored default (set via cs:use or cs:create) 
 
 For more information, read the documentation at https://dev.own3d.tv/docs/cli/
 `
@@ -91,6 +104,8 @@ switch (subcommand) {
         Deno.exit(await csSync(args))
     case 'cs:use':
         Deno.exit(await csUse(args))
+    case 'cs:info':
+        Deno.exit(await csInfo(args))
     default:
         if (args.version) {
             console.log(version)
