@@ -17,6 +17,7 @@ import axios from "npm:axios";
 import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync, csUse, csInfo } from './src/commands/codespace.ts'
 import { configSet, configShow, loadCliConfig, saveCliConfig, type CliConfig } from './src/commands/config.ts'
 import { whoami } from './src/commands/whoami.ts'
+import { ai } from './src/commands/ai.ts'
 import { setColorDisabled } from './src/helpers/colors.ts'
 import { setLoggerQuiet } from './src/helpers/logger.ts'
 
@@ -49,6 +50,7 @@ GLOBAL FLAGS:
     -q, --quiet      Reduce non-essential output (persist via: own3d config:set quiet true)
 
 SUBCOMMANDS:
+    ai               Chat with the OWN3D AI coding agent
     ext:deploy       Deploy an extension to the cloud
     ext:init         Initialize a new extension project
     fn:create        Create a new edge function project
@@ -90,6 +92,8 @@ if (args["help"] || args["h"]) {
 
 // noinspection FallThroughInSwitchStatementJS
 switch (subcommand) {
+  case "ai":
+    Deno.exit(await ai(args));
   case "ext:deploy":
     Deno.exit(await extDeploy(args));
   case "ext:init":
