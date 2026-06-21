@@ -16,12 +16,13 @@ import { ExtDeployHelp } from "./src/utils.ts";
 import axios from "npm:axios";
 import { csCreate, csTree, csLs, csRead, csWrite, csRm, csReset, csSync, csUse, csInfo } from './src/commands/codespace.ts'
 import { configSet, configShow, loadCliConfig, saveCliConfig, type CliConfig } from './src/commands/config.ts'
+import { whoami } from './src/commands/whoami.ts'
 import { setColorDisabled } from './src/helpers/colors.ts'
 import { setLoggerQuiet } from './src/helpers/logger.ts'
 
 const args: Args = parseArgs(Deno.args);
 
-const version: string = "0.1.0-rc.10";
+const version: string = "0.1.0-rc.11";
 
 // set user agent for axios
 axios.defaults.headers["User-Agent"] = `own3d-cli/${version}`;
@@ -66,6 +67,7 @@ SUBCOMMANDS:
     config:show      Show current CLI preferences
     self-update      Update the CLI to the latest version
     login            Log in to OWN3D
+    whoami           Show the currently authenticated user
 
 Global codespace resolution order for cs:* (except cs:use): --id > ENV OWN3D_CODESPACE_ID > stored default (set via cs:use or cs:create) 
 
@@ -127,6 +129,8 @@ switch (subcommand) {
         Deno.exit(await configSet(args))
     case 'config:show':
         Deno.exit(await configShow(args))
+  case 'whoami':
+    Deno.exit(await whoami(args))
   default:
     if (args.version) {
       console.log(version);
