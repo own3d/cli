@@ -33,7 +33,7 @@ export function login(_args: Args): Promise<number> {
         client_id: '9853a006-86a1-4f02-bfa2-d58daa3581a8',
         redirect_uri: 'http://localhost:1337/cli',
         response_type: 'token',
-        scope: '*',
+        scope: 'user:read user:manage extensions:manage connections codespaces:manage mcp:use',
         state,
     })}`
 
@@ -50,8 +50,15 @@ export function login(_args: Args): Promise<number> {
             if (req.url.endsWith('/redirect')) {
                 return new Response('', {status: 302, headers: {Location: authorizeUrl}})
             }
+            const reqUrl = new URL(req.url)
+            if (reqUrl.searchParams.has('error')) {
+                const msg = reqUrl.searchParams.get('error_description') ?? reqUrl.searchParams.get('error') ?? 'Unknown OAuth error'
+                logError(msg)
+                setTimeout(() => resolve(1), 500)
+                return new Response(`<!DOCTYPE html><html><body><p>${msg}</p><script>setTimeout(()=>close(),2000)</script></body></html>`, {headers: {'Content-Type': 'text/html'}})
+            }
             if (req.url.endsWith('/callback')) {
-                const queryParams = await req.json() as Record<string, string | any>; // deno-lint-ignore no-explicit-any
+                const queryParams = await req.json() as Record<string, string | unknown>;
                 if (!state || state !== queryParams.state) {
                     return new Response('Invalid state.')
                 }
